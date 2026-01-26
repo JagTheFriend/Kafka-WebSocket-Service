@@ -9,8 +9,8 @@ import (
 
 var kafkaURL = "kafka:9092"
 
-// GetKafkaReader Created Producers
-func GetKafkaReader(topic, groupID string) *kafka.Reader {
+// NewKafkaReader Created Consumers
+func NewKafkaReader(topic, groupID string) *kafka.Reader {
 	brokers := strings.Split(kafkaURL, ",")
 	return kafka.NewReader(kafka.ReaderConfig{
 		Brokers:  brokers,
@@ -21,12 +21,12 @@ func GetKafkaReader(topic, groupID string) *kafka.Reader {
 	})
 }
 
-// NewKafkaWriter Creates Consumers
+// NewKafkaWriter Creates Producers
 func NewKafkaWriter(topic string) *kafka.Writer {
 	return &kafka.Writer{
 		Addr:     kafka.TCP(kafkaURL),
 		Topic:    topic,
-		Balancer: &kafka.LeastBytes{},
+		Balancer: &kafka.Hash{},
 		// BatchSize: 10,
 	}
 }
