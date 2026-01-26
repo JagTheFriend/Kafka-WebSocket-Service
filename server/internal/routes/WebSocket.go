@@ -23,7 +23,7 @@ func NewWebSocketRoute(e *echo.Group) *WebSocketRoute {
 
 	return &WebSocketRoute{
 		e:        grouped,
-		consumer: util.NewKafkaReader("message", "message"),
+		consumer: util.NewKafkaReader("message", "consume-message"),
 	}
 }
 
