@@ -3,6 +3,7 @@ package routes
 
 import (
 	"common/types"
+	"fmt"
 	util "kafka-client/internals"
 	"net/http"
 
@@ -13,6 +14,7 @@ import (
 type MessageRoute struct {
 	e        *echo.Group
 	producer *kafka.Writer
+	count    int
 }
 
 func NewMessageRoute(e *echo.Group) *MessageRoute {
@@ -22,6 +24,7 @@ func NewMessageRoute(e *echo.Group) *MessageRoute {
 	return &MessageRoute{
 		e:        grouped,
 		producer: producer,
+		count:    0,
 	}
 }
 
@@ -40,6 +43,9 @@ func (h *MessageRoute) newMessage(c *echo.Context) error {
 	if err != nil {
 		return c.String(http.StatusBadRequest, "Bad Request")
 	}
+
+	user.Content = fmt.Sprintf("counter: %d | Content: %s", h.count, user.Content)
+	h.count += 1
 
 	ctx := c.Request().Context()
 	key := "message.new"
