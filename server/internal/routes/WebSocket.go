@@ -8,12 +8,10 @@ import (
 	util "kafka-client/internals"
 	"net/http"
 
-	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v5"
 	"github.com/segmentio/kafka-go"
+	"golang.org/x/net/websocket"
 )
-
-var upgrader = websocket.Upgrader{}
 
 type WebSocketRoute struct {
 	e        *echo.Group
@@ -25,7 +23,7 @@ func NewWebSocketRoute(e *echo.Group) *WebSocketRoute {
 
 	return &WebSocketRoute{
 		e:        grouped,
-		consumer: util.NewKafkaReader("message", "client-response-group"),
+		consumer: util.NewKafkaReader("message", "message"),
 	}
 }
 
@@ -44,40 +42,45 @@ func (h *WebSocketRoute) broadCastMessage(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing data")
 	}
 
-	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
-	if err != nil {
-		return err
-	}
-	defer ws.Close()
+	websocket.Server{
+		Handshake: func(cfg *websocket.Config, r *http.Request) error {
+			return nil // allow all origins (dev only)
+		},
+		Handler: func(ws *websocket.Conn) {
+			defer ws.Close()
+			for {
+				msg, err := h.consumer.FetchMessage(c.Request().Context())
+				if err != nil {
+					c.Logger().Error("failed to fetch message", "error", err)
+					continue
+				}
 
-	for {
-		// Block until client disconnects
-		select {
-		case <-c.Request().Context().Done():
-			return c.String(http.StatusGatewayTimeout, "Gateway timeout")
-		default:
-			msg, err := h.consumer.FetchMessage(c.Request().Context())
-			if err != nil {
-				continue
-			}
+				fmt.Printf("Key: %s\n", string(msg.Key))
 
-			if string(msg.Key) != "messag.new" {
-				continue
-			}
+				if string(msg.Key) != "message.new" {
+					continue
+				}
 
-			var value types.Message
-			err = json.Unmarshal(msg.Value, &value)
-			if err != nil {
-				continue
-			}
-			fmt.Printf("message: %s\n", value.ChatID)
+				var value types.Message
+				err = json.Unmarshal(msg.Value, &value)
+				if err != nil {
+					continue
+				}
+				fmt.Printf("message: %s\n", value.ChatID)
 
-			err = ws.WriteMessage(websocket.TextMessage, msg.Value)
-			if err != nil {
-				c.Logger().Error("failed to write WS message", "error", err)
-			} else {
-				h.consumer.CommitMessages(c.Request().Context(), msg)
+				if value.ReceiverID != ReceiverID {
+					continue
+				}
+
+				err = websocket.Message.Send(ws, msg.Value)
+				if err != nil {
+					c.Logger().Error("failed to write WS message", "error", err)
+				} else {
+					h.consumer.CommitMessages(c.Request().Context(), msg)
+				}
 			}
-		}
-	}
+		},
+	}.ServeHTTP(c.Response(), c.Request())
+
+	return nil
 }

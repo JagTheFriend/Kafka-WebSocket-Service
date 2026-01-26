@@ -9,7 +9,7 @@ require (
 )
 
 require (
-	github.com/gorilla/websocket v1.5.3
 	github.com/labstack/echo/v5 v5.0.0
 	github.com/segmentio/kafka-go v0.4.50
+	golang.org/x/net v0.49.0
 )
