@@ -2,6 +2,9 @@
 package routes
 
 import (
+	"common/types"
+	"encoding/json"
+	"fmt"
 	util "kafka-client/internals"
 	"net/http"
 
@@ -36,10 +39,8 @@ func (h *WebSocketRoute) healthCheck(c *echo.Context) error {
 }
 
 func (h *WebSocketRoute) broadCastMessage(c *echo.Context) error {
-	defer h.consumer.Close()
-
-	receiverId := c.Request().Header.Get("ReceiverId")
-	if receiverId == "" {
+	ReceiverID := c.Request().Header.Get("ReceiverId")
+	if ReceiverID == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing data")
 	}
 
@@ -59,6 +60,18 @@ func (h *WebSocketRoute) broadCastMessage(c *echo.Context) error {
 			if err != nil {
 				continue
 			}
+
+			if string(msg.Key) != "messag.new" {
+				continue
+			}
+
+			var value types.Message
+			err = json.Unmarshal(msg.Value, &value)
+			if err != nil {
+				continue
+			}
+			fmt.Printf("message: %s\n", value.ChatID)
+
 			err = ws.WriteMessage(websocket.TextMessage, msg.Value)
 			if err != nil {
 				c.Logger().Error("failed to write WS message", "error", err)
