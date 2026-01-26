@@ -35,7 +35,7 @@ func (h *MessageRoute) healthCheck(c *echo.Context) error {
 }
 
 func (h *MessageRoute) newMessage(c *echo.Context) error {
-	var user types.User
+	var user types.Message
 	err := c.Bind(&user)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "Bad Request")
