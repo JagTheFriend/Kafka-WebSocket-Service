@@ -1,4 +1,4 @@
-// Package types Stored user types
+// Package types Stores Common structs
 package types
 
 type Message struct {
