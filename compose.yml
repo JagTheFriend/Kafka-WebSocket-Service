@@ -49,7 +49,7 @@ services:
     networks:
       - app-network
 
-  database: 
+  database:
     image: postgres:18.1
     restart: unless-stopped
     volumes:
@@ -75,8 +75,9 @@ services:
       - app-network
 
   app-server:
-    build: .
-    target: server
+    build:
+      context: .
+      target: server
     restart: unless-stopped
     ports:
       - "1323:1323"
@@ -86,10 +87,10 @@ services:
     networks:
       - app-network
 
-    
   app-database:
-    build: .
-    target: database
+    build:
+      context: .
+      target: database
     restart: unless-stopped
     ports:
       - "1323:1323"
@@ -98,10 +99,10 @@ services:
     networks:
       - app-network
 
-    
   app-kafka:
-    build: .
-    target: kafka
+    build:
+      context: .
+      target: kafka
     restart: unless-stopped
     ports:
       - "1323:1323"
@@ -112,8 +113,9 @@ services:
       - app-network
 
   app-all:
-    build: .
-    target: all
+    build:
+      context: .
+      target: all
     restart: unless-stopped
     ports:
       - "1323:1323"
@@ -122,4 +124,3 @@ services:
       - database
     networks:
       - app-network
-  
