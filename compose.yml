@@ -1,0 +1,125 @@
+networks:
+  app-network:
+
+volumes:
+  database_data:
+    driver: local
+  cache_data:
+    driver: local
+
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - app-network
+
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - app-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    networks:
+      - app-network
+
+  database: 
+    image: postgres:18.1
+    restart: unless-stopped
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: app_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+
+  cache:
+    image: valkey/valkey:9.0.1
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - cache_data:/data
+    command: ["valkey-server", "--appendonly", "yes"]
+    networks:
+      - app-network
+
+  app-server:
+    build: .
+    target: server
+    restart: unless-stopped
+    ports:
+      - "1323:1323"
+    depends_on:
+      - kafka
+      - database
+    networks:
+      - app-network
+
+    
+  app-database:
+    build: .
+    target: database
+    restart: unless-stopped
+    ports:
+      - "1323:1323"
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+    
+  app-kafka:
+    build: .
+    target: kafka
+    restart: unless-stopped
+    ports:
+      - "1323:1323"
+    depends_on:
+      - kafka
+      - database
+    networks:
+      - app-network
+
+  app-all:
+    build: .
+    target: all
+    restart: unless-stopped
+    ports:
+      - "1323:1323"
+    depends_on:
+      - kafka
+      - database
+    networks:
+      - app-network
+  

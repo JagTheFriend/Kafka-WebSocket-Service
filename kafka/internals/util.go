@@ -12,7 +12,7 @@ import (
 	kafka "github.com/segmentio/kafka-go"
 )
 
-var kafkaURL = "0.0.0.0:9093"
+var kafkaURL = "kafka:9092"
 
 // NewKafkaReader Created Consumers
 func NewKafkaReader(topic, groupID string) *kafka.Reader {
